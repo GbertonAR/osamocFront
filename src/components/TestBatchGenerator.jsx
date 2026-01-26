@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import API_BASE_URL from '../api_config';
 
-const TestBatchGenerator = () => {
+const TestBatchGenerator = ({ onBatchGenerated }) => {
     const [count, setCount] = useState(5);
     const [generating, setGenerating] = useState(false);
     const [result, setResult] = useState(null);
@@ -25,7 +26,7 @@ const TestBatchGenerator = () => {
             await new Promise(r => setTimeout(r, 600));
             addLog(`Generando perfiles de beneficiarios aleatorios...`);
 
-            const response = await fetch("http://localhost:8000/generate-batch", {
+            const response = await fetch(`${API_BASE_URL}/generate-batch`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ count }),

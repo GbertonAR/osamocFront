@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import API_BASE_URL from '../api_config';
 
 const DocumentUpload = ({ onUploadSuccess }) => {
     const [file, setFile] = useState(null);
@@ -52,7 +53,7 @@ const DocumentUpload = ({ onUploadSuccess }) => {
             await new Promise(r => setTimeout(r, 800));
             addLog(`🔍 Analizando estructura visual (Layout Analysis)...`);
 
-            const response = await fetch("http://localhost:8000/upload", {
+            const response = await fetch(`${API_BASE_URL}/upload`, {
                 method: "POST",
                 body: formData,
             });
