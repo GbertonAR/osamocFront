@@ -4,17 +4,34 @@ import DocumentUpload from './components/DocumentUpload';
 import TestBatchGenerator from './components/TestBatchGenerator';
 import AuditExplorer from './components/AuditExplorer';
 import SystemMonitor from './components/SystemMonitor';
+import ProviderLogin from './components/ProviderLogin';
+import ProviderWizard from './components/ProviderWizard'; // Importar el componente
 
 function App() {
+  // Estado de Sesión Global
+  const [user, setUser] = useState(null); // null = Logged Out
   const [activeTab, setActiveTab] = useState('dashboard');
+
   const [sessionStats, setSessionStats] = useState({
     totalProcessed: 0,
     totalGenerated: 0,
     totalProcessTime: 0,
     processedAmount: 0,
-    totalTokens: 0 // <--- NUEVO: Tracking global de tokens
+    totalTokens: 0
   });
   const [sessionHistory, setSessionHistory] = useState([]);
+
+  // 1. Si no hay usuario, mostrar login
+  if (!user) {
+    return <ProviderLogin onLoginSuccess={setUser} />;
+  }
+
+  // 2. Si es Prestador, mostramos el Portal de Autogestión
+  if (user.role === 'PROVIDER') {
+    return <ProviderWizard user={user} onLogout={() => setUser(null)} />;
+  }
+
+  // 3. Si es Admin, mostramos dashboard completo
 
   const handleUploadSuccess = (result) => {
     // result ahora viene del nuevo ai_service.py con usage_metrics
@@ -55,9 +72,14 @@ function App() {
     }));
   };
 
+  const handleLogout = () => {
+    setUser(null);
+    setActiveTab('dashboard');
+  };
+
   return (
     <div className="flex h-screen w-full bg-osamoc-gray overflow-hidden">
-      {/* Sidebar */}
+      {/* Sidebar - Solo visible para ADMIN por ahora (o adaptado) */}
       <div className="w-64 bg-osamoc-blue text-white flex flex-col shadow-xl">
         <div className="p-8 pb-4">
           <div className="bg-white/95 p-4 rounded-2xl shadow-lg mb-6 flex justify-center items-center">

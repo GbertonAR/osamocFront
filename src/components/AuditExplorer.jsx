@@ -129,36 +129,85 @@ const AuditExplorer = () => {
                 </div>
             </div>
 
-            {/* Modal Detalle (Opcional simplificado) */}
+            {/* Modal de Inteligencia de Auditoría (Ficha de Hallazgos) */}
             {selectedAudit && (
-                <div className="fixed inset-0 bg-osamoc-blue/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedAudit(null)}>
-                    <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-                        <div className="p-8 border-b border-gray-100 flex justify-between items-start">
-                            <div>
-                                <h3 className="text-2xl font-bold text-osamoc-blue">{selectedAudit.emisor}</h3>
-                                <p className="text-sm text-gray-450 mt-1">Sesión: {selectedAudit.session_id}</p>
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all" onClick={() => setSelectedAudit(null)}>
+                    <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300 border border-white/20" onClick={e => e.stopPropagation()}>
+
+                        {/* Header Premium */}
+                        <div className={`p-8 pb-12 text-white relative overflow-hidden ${selectedAudit.reconciliation_status === 'MATCH' ? 'bg-gradient-to-br from-green-500 to-emerald-700' : 'bg-gradient-to-br from-red-500 to-rose-700'}`}>
+                            <div className="absolute top-0 right-0 p-8 opacity-20 transform translate-x-4 -translate-y-4">
+                                <span className="text-9xl font-black">AI</span>
                             </div>
-                            <button onClick={() => setSelectedAudit(null)} className="text-2xl text-gray-300 hover:text-gray-600 tracking-tighter transition-colors">✕</button>
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start">
+                                    <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Ficha de Auditoría V9.2</span>
+                                    <button onClick={() => setSelectedAudit(null)} className="text-white/60 hover:text-white transition-colors">✕</button>
+                                </div>
+                                <h3 className="text-3xl font-black mt-4 leading-tight">{selectedAudit.emisor}</h3>
+                                <p className="text-white/80 font-medium text-sm mt-1 opacity-90">{selectedAudit.filename}</p>
+                            </div>
                         </div>
-                        <div className="p-8 space-y-6">
+
+                        {/* Contenido de la Ficha */}
+                        <div className="p-8 -mt-8 bg-white rounded-t-[2.5rem] relative z-20 space-y-6">
+
+                            {/* Resumen Ejecutivo */}
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Status Auditoría</p>
-                                    <p className="font-bold text-gray-700 capitalize">{selectedAudit.status.toLowerCase()}</p>
+                                <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 group hover:border-osamoc-blue/30 transition-all">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Total Mandante</p>
+                                    <p className="text-2xl font-black text-gray-800">${parseFloat(selectedAudit.total || 0).toLocaleString()}</p>
                                 </div>
-                                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Reconciliación</p>
-                                    <p className={`font-bold ${selectedAudit.reconciliation_status === 'MATCH' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {selectedAudit.reconciliation_status} (${selectedAudit.reconciliation_diff.toFixed(2)})
-                                    </p>
+                                <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 group hover:border-osamoc-blue/30 transition-all">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Estado Reconciliación</p>
+                                    <div className="flex items-center space-x-2">
+                                        <div className={`w-3 h-3 rounded-full ${selectedAudit.reconciliation_status === 'MATCH' ? 'bg-green-500 shadow-lg shadow-green-200' : 'bg-red-500 shadow-lg shadow-red-200'}`}></div>
+                                        <p className="font-black text-gray-800 uppercase text-lg">{selectedAudit.reconciliation_status || 'PENDING'}</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div>
-                                <p className="text-[10px] font-black text-gray-400 uppercase mb-3">Acciones Disponibles</p>
-                                <div className="flex space-x-4">
-                                    <button onClick={() => downloadExport(selectedAudit.session_id, 'json')} className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-xl active:scale-95">Exportar Consolidado JSON</button>
-                                    <button onClick={() => downloadExport(selectedAudit.session_id, 'txt')} className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-xl active:scale-95">Exportar Plano TXT</button>
+
+                            {/* Narrativa de IA */}
+                            <div className="p-6 bg-blue-50/50 rounded-3xl border border-blue-100/50">
+                                <div className="flex items-center space-x-2 mb-2">
+                                    <span className="text-lg">🧠</span>
+                                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Análisis de Inteligencia Forense</p>
                                 </div>
+                                <p className="text-sm text-blue-900 leading-relaxed font-medium">
+                                    {selectedAudit.narrative || "El sistema ha procesado los documentos. No se generó narrativa adicional para esta sesión."}
+                                </p>
+                            </div>
+
+                            {/* Listado de Hallazgos (The "Card" Findings) */}
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 ml-2">Hallazgos Técnicos ({selectedAudit.findings?.length || 0})</p>
+                                <div className="space-y-3">
+                                    {selectedAudit.findings && selectedAudit.findings.length > 0 ? (
+                                        selectedAudit.findings.map((f, i) => (
+                                            <div key={i} className={`p-4 rounded-2xl border flex items-start space-x-4 transition-all ${f.severity === 'RED' ? 'bg-red-50/30 border-red-100' : 'bg-yellow-50/30 border-yellow-100'}`}>
+                                                <span className="text-xl">{f.severity === 'RED' ? '🔴' : '⚠️'}</span>
+                                                <div className="flex-1">
+                                                    <p className={`text-sm font-bold ${f.severity === 'RED' ? 'text-red-700' : 'text-yellow-700'}`}>{f.message}</p>
+                                                    <div className="mt-2 flex items-center bg-white/60 p-2 rounded-xl">
+                                                        <span className="text-[10px] mr-2">💡</span>
+                                                        <p className="text-[11px] text-gray-600 italic font-medium">{f.hint}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="p-4 bg-green-50/30 border border-green-100 rounded-2xl flex items-center space-x-4">
+                                            <span className="text-xl">✅</span>
+                                            <p className="text-sm font-bold text-green-700 uppercase tracking-wide">No se detectaron discrepancias. Documentación íntegra.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Footter Acciones */}
+                            <div className="flex space-x-3 pt-4">
+                                <button onClick={() => downloadExport(selectedAudit.session_id, 'json')} className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-xl active:scale-95">Descargar JSON</button>
+                                <button onClick={() => downloadExport(selectedAudit.session_id, 'txt')} className="flex-1 bg-white border-2 border-slate-100 text-slate-800 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-all active:scale-95">Vista TXT</button>
                             </div>
                         </div>
                     </div>
