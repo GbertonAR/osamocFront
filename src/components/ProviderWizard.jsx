@@ -74,6 +74,14 @@ const ProviderWizard = ({ user, onLogout }) => {
             setLoadingText(`Analizando ${file.name} con IA...`);
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('provider_cuit', user.cuit);
+
+            // HERENCIA: Enviamos el modo detectado o confirmado en la factura
+            if (invoiceData?.tipo_prestacion) {
+                const auditMode = invoiceData.tipo_prestacion.toUpperCase().includes('INTERNACION') ? 'hierarchical' : 'flat';
+                formData.append('mode', auditMode);
+                console.log(`🔗 [PORTAL] Forzando modo ${auditMode} para anexo ${file.name}`);
+            }
 
             try {
                 const response = await axios.post(`${API_BASE_URL}/provider/extract-annex`, formData, {
@@ -82,15 +90,26 @@ const ProviderWizard = ({ user, onLogout }) => {
 
                 if (response.data.status === 'success') {
                     const data = response.data.data;
-                    // FIX: Parsear el total que ahora viene como string europo
-                    // Nota: Backend ahora devuelve 'total_items' como float calculado (Neto), pero por seguridad parseamos si es string
-                    const rawTotal = data.total_items || 0;
-                    const numericTotal = parseCurrency(rawTotal);
+                    const mode = response.data.mode;
+
+                    let numericTotal = 0;
+                    let itemsCount = 0;
+
+                    if (mode === 'hierarchical') {
+                        // El backend jerárquico devuelve estructura Level 1/2
+                        numericTotal = (data.pacientes || []).reduce((acc, p) => acc + parseFloat(p.level1?.total_paciente || 0), 0);
+                        itemsCount = (data.pacientes || []).reduce((acc, p) => acc + (p.level2?.items || []).length, 0);
+                    } else {
+                        const rawTotal = data.total_items || 0;
+                        numericTotal = parseCurrency(rawTotal);
+                        itemsCount = (data.items_detalle || []).length;
+                    }
 
                     newAnnexes.push({
                         filename: file.name,
                         total: numericTotal,
-                        items_count: (data.items_detalle || []).length,
+                        items_count: itemsCount,
+                        mode: mode,
                         data: data, // Guardamos data cruda para enviar al final
                         previewUrl: URL.createObjectURL(file) // Para visualización
                     });
@@ -114,11 +133,12 @@ const ProviderWizard = ({ user, onLogout }) => {
 
         try {
             const payload = {
-                session_id: `PORTAL-${Date.now()}`, // ID temporal
+                session_id: `PORTAL-${Date.now()}`,
                 provider_cuit: user.cuit,
                 invoice_data: invoiceData,
-                annexes_data: files.annexes.map(a => a.data), // Enviamos la data extraída de IA
-                total_reconciled: files.annexes.reduce((sum, a) => sum + (a.total || 0), 0)
+                annexes_data: files.annexes.map(a => a.data),
+                total_reconciled: files.annexes.reduce((sum, a) => sum + (a.total || 0), 0),
+                file_path: invoiceData.file_path // Send path to backend
             };
 
             const response = await axios.post(`${API_BASE_URL}/provider/submit-audit`, payload);
@@ -162,11 +182,12 @@ const ProviderWizard = ({ user, onLogout }) => {
                     cae: data.cae || "No detectado",
                     vto_cae: data.vto_cae || "",
                     punto_venta: data.punto_venta || "",
-                    total: data.total_factura || 0.0, // Header extraction uses floats generally
+                    total: data.total_factura || 0.0,
                     subtotal: data.total_importe_bruto || data.total_factura,
-                    // coseguros removed from here as per user request
                     periodo: data.periodo_facturado || "No detectado",
-                    items_factura: data.items_factura || []
+                    items_factura: data.items_factura || [],
+                    tipo_prestacion: data.tipo_prestacion || "AMBULATORIO",
+                    file_path: response.data.temp_path // Capture standardized path
                 };
 
                 setInvoiceData(mappedData);
@@ -199,7 +220,7 @@ const ProviderWizard = ({ user, onLogout }) => {
                 </div>
                 <div className="flex items-center space-x-6">
                     <div className="text-right">
-                        <p className="text-sm font-bold text-slate-800">{user.name}</p>
+                        <p className="text-sm font-bold text-slate-800">{user.name || 'Prestador'}</p>
                         <p className="text-xs text-gray-400 font-mono">{user.cuit || "CUIT no registrado"}</p>
                     </div>
                     <button onClick={onLogout} className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors">
@@ -268,7 +289,17 @@ const ProviderWizard = ({ user, onLogout }) => {
 
                             {/* Formulario Derecha */}
                             <div className="w-1/2 p-8 overflow-y-auto bg-slate-50">
-                                <h3 className="text-xl font-bold text-osamoc-blue mb-2">Validación Inteligente</h3>
+                                <div className="flex items-center space-x-3 mb-2">
+                                    <h3 className="text-xl font-bold text-osamoc-blue">Validación Inteligente</h3>
+                                    {invoiceData?.tipo_prestacion && (
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${invoiceData.tipo_prestacion.includes('INTERNACION')
+                                            ? 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm'
+                                            : 'bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm'
+                                            }`}>
+                                            {invoiceData.tipo_prestacion}
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-xs text-gray-500 mb-6">Confirma que los datos leídos coincidan con tu documento.</p>
 
                                 {/* Validation Alerts */}
@@ -302,6 +333,24 @@ const ProviderWizard = ({ user, onLogout }) => {
                                                     value={invoiceData.fecha}
                                                     onChange={(e) => setInvoiceData({ ...invoiceData, fecha: e.target.value })}
                                                     className="w-full bg-gray-50 rounded-lg px-3 py-2 font-bold text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] uppercase font-black text-gray-400 mb-1 block">CUIT del Proveedor</label>
+                                                <input
+                                                    type="text"
+                                                    value={invoiceData.cuit}
+                                                    onChange={(e) => setInvoiceData({ ...invoiceData, cuit: e.target.value })}
+                                                    className="w-full bg-blue-50/30 rounded-lg px-3 py-2 font-bold text-blue-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] uppercase font-black text-gray-400 mb-1 block">Razón Social</label>
+                                                <input
+                                                    type="text"
+                                                    value={invoiceData.emisor}
+                                                    onChange={(e) => setInvoiceData({ ...invoiceData, emisor: e.target.value })}
+                                                    className="w-full bg-blue-50/30 rounded-lg px-3 py-2 font-bold text-blue-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-100"
                                                 />
                                             </div>
                                             <div className="col-span-2">
@@ -395,7 +444,14 @@ const ProviderWizard = ({ user, onLogout }) => {
                                                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-sm">📎</div>
                                                 <div>
                                                     <p className="text-xs font-bold text-gray-200 max-w-[150px] truncate" title={annex.filename}>{annex.filename}</p>
-                                                    <p className="text-[10px] text-gray-500 uppercase">{annex.items_count || 0} items</p>
+                                                    <div className="flex items-center space-x-2">
+                                                        <p className="text-[10px] text-gray-500 uppercase">
+                                                            {annex.mode === 'hierarchical' ? `${annex.data?.pacientes?.length || 0} pacientes` : `${annex.items_count || 0} items`}
+                                                        </p>
+                                                        {annex.mode === 'hierarchical' && (
+                                                            <span className="px-1.5 py-0.5 bg-blue-500/30 text-blue-300 text-[8px] font-black rounded uppercase">Internación</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-2">
@@ -479,21 +535,82 @@ const ProviderWizard = ({ user, onLogout }) => {
                         </div>
                     )}
 
-                    {/* PDF Preview Modal */}
+                    {/* PDF Preview Modal con Panel de Datos */}
                     {previewFile && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-10 animate-fade-in" onClick={() => setPreviewFile(null)}>
-                            <div className="bg-white w-full max-w-5xl h-full rounded-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-                                <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
-                                    <h3 className="text-white font-bold text-lg">{previewFile.filename}</h3>
-                                    <button onClick={() => setPreviewFile(null)} className="text-gray-400 hover:text-white transition-colors text-2xl font-bold">
-                                        ✕
-                                    </button>
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6 animate-fade-in" onClick={() => setPreviewFile(null)}>
+                            <div className="bg-white w-full max-w-7xl h-[90vh] rounded-3xl flex flex-col overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+                                <div className="bg-slate-900 px-8 py-4 flex justify-between items-center">
+                                    <div className="flex items-center space-x-4">
+                                        <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">📎</div>
+                                        <div>
+                                            <h3 className="text-sm font-black text-white uppercase tracking-tighter">{previewFile.filename}</h3>
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase">{previewFile.mode === 'hierarchical' ? 'Auditoría Jerárquica' : 'Auditoría Plana'}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setPreviewFile(null)}
+                                        className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full text-white transition-all scale-100 hover:scale-110"
+                                    >✕</button>
                                 </div>
-                                <iframe src={previewFile.previewUrl} className="flex-1 w-full bg-slate-200" title="PDF Preview"></iframe>
+                                <div className="flex-1 flex overflow-hidden">
+                                    {/* PDF View */}
+                                    <div className="w-2/3 h-full bg-slate-200">
+                                        <iframe src={previewFile.previewUrl} className="w-full h-full border-none" title="PDF Preview" />
+                                    </div>
+
+                                    {/* Data View */}
+                                    <div className="w-1/3 h-full bg-slate-50 border-l border-gray-200 overflow-y-auto custom-scrollbar p-6">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Datos Extraídos (IA)</h4>
+                                            <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-black rounded-full">${previewFile.total?.toLocaleString()}</span>
+                                        </div>
+
+                                        {previewFile.mode === 'hierarchical' ? (
+                                            <div className="space-y-4">
+                                                {(previewFile.data?.pacientes || []).map((p, pIdx) => (
+                                                    <div key={pIdx} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                                        <div className="flex justify-between items-start mb-3">
+                                                            <div>
+                                                                <p className="text-[10px] font-black text-blue-600 uppercase mb-0.5">{p.level1?.dni}</p>
+                                                                <h5 className="text-xs font-bold text-slate-800 leading-tight uppercase">{p.level1?.paciente}</h5>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-xs font-black text-slate-900">${parseFloat(p.level1?.total_paciente || 0).toLocaleString()}</p>
+                                                                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${p.level1?.validacion_interna === 'MATCH' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                                    {p.level1?.validacion_interna}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        {/* Sub-items del paciente */}
+                                                        <div className="mt-2 space-y-1.5 pt-2 border-t border-dashed border-gray-100">
+                                                            {(p.level2?.items || []).map((it, itIdx) => (
+                                                                <div key={itIdx} className="flex justify-between items-center text-[10px]">
+                                                                    <span className="text-gray-500 max-w-[140px] truncate uppercase">{it.desc}</span>
+                                                                    <span className="font-bold text-slate-600">${parseFloat(it.subtotal || 0).toLocaleString()}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {(previewFile.data?.items_detalle || []).map((it, idx) => (
+                                                    <div key={idx} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                                                        <div className="max-w-[70%]">
+                                                            <p className="text-[10px] font-bold text-slate-800 leading-tight truncate uppercase">{it.descripcion_practica || it.descripcion}</p>
+                                                            <p className="text-[8px] text-gray-400 font-black uppercase">{it.nombre_paciente} | {it.dni_paciente}</p>
+                                                        </div>
+                                                        <span className="text-[10px] font-black text-slate-900">${parseCurrency(it.subtotal || it.importe).toLocaleString()}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
-
                 </div>
             </div>
         </div>

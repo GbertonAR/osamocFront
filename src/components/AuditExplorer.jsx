@@ -108,7 +108,7 @@ const AuditExplorer = () => {
                                     </td>
                                     <td className="px-8 py-5 text-center">
                                         <div className="flex flex-col items-center">
-                                            <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full ${a.reconciliation_status === 'MATCH' ? 'bg-green-500 text-white' : 'bg-red-500 text-white shadow-lg shadow-red-200 anim-pulse'}`}>
+                                            <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full ${['MATCH', 'BALANCED'].includes(a.reconciliation_status) ? 'bg-green-500 text-white' : 'bg-red-500 text-white shadow-lg shadow-red-200 anim-pulse'}`}>
                                                 {a.reconciliation_status || 'PENDING'}
                                             </span>
                                             {a.reconciliation_diff > 0 && (
@@ -135,7 +135,7 @@ const AuditExplorer = () => {
                     <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300 border border-white/20" onClick={e => e.stopPropagation()}>
 
                         {/* Header Premium */}
-                        <div className={`p-8 pb-12 text-white relative overflow-hidden ${selectedAudit.reconciliation_status === 'MATCH' ? 'bg-gradient-to-br from-green-500 to-emerald-700' : 'bg-gradient-to-br from-red-500 to-rose-700'}`}>
+                        <div className={`p-8 pb-12 text-white relative overflow-hidden ${['MATCH', 'BALANCED'].includes(selectedAudit.reconciliation_status) ? 'bg-gradient-to-br from-green-500 to-emerald-700' : 'bg-gradient-to-br from-red-500 to-rose-700'}`}>
                             <div className="absolute top-0 right-0 p-8 opacity-20 transform translate-x-4 -translate-y-4">
                                 <span className="text-9xl font-black">AI</span>
                             </div>
@@ -161,7 +161,7 @@ const AuditExplorer = () => {
                                 <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100 group hover:border-osamoc-blue/30 transition-all">
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Estado Reconciliación</p>
                                     <div className="flex items-center space-x-2">
-                                        <div className={`w-3 h-3 rounded-full ${selectedAudit.reconciliation_status === 'MATCH' ? 'bg-green-500 shadow-lg shadow-green-200' : 'bg-red-500 shadow-lg shadow-red-200'}`}></div>
+                                        <div className={`w-3 h-3 rounded-full ${['MATCH', 'BALANCED'].includes(selectedAudit.reconciliation_status) ? 'bg-green-500 shadow-lg shadow-green-200' : 'bg-red-500 shadow-lg shadow-red-200'}`}></div>
                                         <p className="font-black text-gray-800 uppercase text-lg">{selectedAudit.reconciliation_status || 'PENDING'}</p>
                                     </div>
                                 </div>

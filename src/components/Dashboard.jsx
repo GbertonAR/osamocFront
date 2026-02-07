@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../api_config';
 
-const Dashboard = ({ stats: initialStats }) => {
+const Dashboard = ({ stats: initialStats, user }) => {
     const [dbStats, setDbStats] = useState({ total_tokens: 0, total_amount: 0, total_count: 0 });
     const [loading, setLoading] = useState(true);
 
@@ -59,7 +59,7 @@ const Dashboard = ({ stats: initialStats }) => {
         <div className="p-10 space-y-10 animate-fade-in">
             <div className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-4xl font-black text-osamoc-blue tracking-tighter">Bienvenido, Gustavo</h1>
+                    <h1 className="text-4xl font-black text-osamoc-blue tracking-tighter">Bienvenido, {user?.name || 'Usuario'}</h1>
                     <p className="text-gray-400 font-medium mt-1">Tu plataforma de auditoría médica está operando al 100%.</p>
                 </div>
                 <div className="flex space-x-2">
