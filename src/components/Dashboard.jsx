@@ -23,7 +23,7 @@ const Dashboard = ({ stats: initialStats, user }) => {
     const cards = [
         {
             title: "Total Auditado",
-            value: `$${(dbStats.total_amount || 0).toLocaleString()}`,
+            value: `$${(dbStats?.total_amount || 0).toLocaleString()}`,
             sub: "Caudal financiero analizado",
             icon: "💳",
             color: "from-blue-600 to-indigo-600",
