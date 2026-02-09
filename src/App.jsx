@@ -7,6 +7,7 @@ import SystemMonitor from './components/SystemMonitor';
 import ProviderLogin from './components/ProviderLogin';
 import ProviderWizard from './components/ProviderWizard'; // Importar el componente
 import AdminPanel from './components/AdminPanel';
+import ReportsDashboard from './components/ReportsDashboard';
 
 function App() {
   // Estado de Sesión Global
@@ -115,16 +116,21 @@ function App() {
         <div className="h-px bg-white/10 mx-6 mb-4"></div>
 
         <nav className="flex-1 px-4 py-4 space-y-2">
-          {['dashboard', 'upload', 'history', 'monitor', 'generator', 'admin', 'settings'].map((tab) => (
+          {['dashboard', 'informes', 'upload', 'history', 'monitor', 'generator', 'admin', 'settings'].map((tab) => (
             <button
               key={tab}
               onClick={() => {
+                if (tab === 'generator') return; // Inhibir acción
                 setActiveTab(tab);
-                setIsMenuOpen(false); // Cerrar al seleccionar en móvil
+                setIsMenuOpen(false);
               }}
-              className={`w-full text-left px-4 py-3 rounded-md transition-colors text-white capitalize ${activeTab === tab ? 'bg-white/10 font-bold border-l-4 border-cyan-400' : 'hover:bg-white/5 opacity-70'}`}
+              disabled={tab === 'generator'}
+              className={`w-full text-left px-4 py-3 rounded-md transition-colors text-white capitalize 
+                ${activeTab === tab ? 'bg-white/10 font-bold border-l-4 border-cyan-400' : 'hover:bg-white/5 opacity-70'}
+                ${tab === 'generator' ? 'opacity-30 cursor-not-allowed bg-gray-800/50' : ''}
+              `}
             >
-              {tab === 'generator' ? 'Generar Lote' : tab === 'monitor' ? 'Monitor IA' : tab === 'admin' ? 'Gestión' : tab}
+              {tab === 'generator' ? 'Generar Lote (Inhibido)' : tab === 'monitor' ? 'Monitor IA' : tab === 'admin' ? 'Gestión' : tab === 'informes' ? 'Informes' : tab}
             </button>
           ))}
         </nav>
@@ -184,6 +190,8 @@ function App() {
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">
           {activeTab === 'dashboard' && <Dashboard stats={sessionStats} user={user} />}
+
+          {activeTab === 'informes' && <ReportsDashboard />}
 
           {activeTab === 'upload' && (
             <DocumentUpload onUploadSuccess={handleUploadSuccess} />
