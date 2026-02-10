@@ -88,6 +88,12 @@ const ReportsDashboard = () => {
         </button>
     );
 
+    const [expandedInvoice, setExpandedInvoice] = useState(null);
+
+    const toggleExpand = (id) => {
+        setExpandedInvoice(expandedInvoice === id ? null : id);
+    };
+
     return (
         <div className="p-8 space-y-8 animate-fade-in bg-slate-50 min-h-screen">
             <div className="flex justify-between items-end">
@@ -249,21 +255,53 @@ const ReportsDashboard = () => {
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
                                         {getSortedData(data.invoices, 'invoices').map((inv, idx) => (
-                                            <tr key={idx} className="bg-white hover:bg-osamoc-blue/[0.02] transition-colors group">
-                                                <td className="px-6 py-4 text-xs font-medium">{inv.fecha ? new Date(inv.fecha).toLocaleDateString() : '-'}</td>
-                                                <td className="px-6 py-4">
-                                                    <p className="font-black text-slate-800">{inv.provider}</p>
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase">ID: {inv.id.substring(0, 8)}</p>
-                                                </td>
-                                                <td className="px-6 py-4 font-mono text-gray-600">{inv.nro_comprobante}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${inv.tipo === 'INTERNACION' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                                        {inv.tipo}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right font-black text-slate-800 text-base">${inv.total.toLocaleString()}</td>
-                                                <td className="px-6 py-4 text-center font-bold text-gray-500 bg-gray-50/30 group-hover:bg-transparent">{inv.periodo}</td>
-                                            </tr>
+                                            <React.Fragment key={idx}>
+                                                <tr
+                                                    onClick={() => toggleExpand(inv.id)}
+                                                    className={`bg-white hover:bg-osamoc-blue/[0.02] cursor-pointer transition-colors group ${expandedInvoice === inv.id ? 'bg-osamoc-blue/[0.03]' : ''}`}
+                                                >
+                                                    <td className="px-6 py-4 text-xs font-medium">
+                                                        {inv.fecha ? new Date(inv.fecha).toLocaleDateString() : '-'}
+                                                        <span className="ml-2 text-gray-300">{expandedInvoice === inv.id ? '▼' : '▶'}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <p className="font-black text-slate-800">{inv.provider}</p>
+                                                        <p className="text-[10px] text-gray-400 font-bold uppercase">ID: {inv.id.substring(0, 8)}</p>
+                                                    </td>
+                                                    <td className="px-6 py-4 font-mono text-gray-600">{inv.nro_comprobante}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${inv.tipo === 'INTERNACION' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                            {inv.tipo}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right font-black text-slate-800 text-base">${inv.total.toLocaleString()}</td>
+                                                    <td className="px-6 py-4 text-center font-bold text-gray-500 bg-gray-50/30 group-hover:bg-transparent">{inv.periodo}</td>
+                                                </tr>
+                                                {expandedInvoice === inv.id && (
+                                                    <tr className="bg-gray-50/50">
+                                                        <td colSpan="6" className="px-12 py-6">
+                                                            <div className="bg-white rounded-xl shadow-inner border border-gray-100 p-4">
+                                                                <h4 className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-3">Ítems Desglosados de Cabecera</h4>
+                                                                <div className="space-y-2">
+                                                                    {inv.items_factura && inv.items_factura.length > 0 ? (
+                                                                        inv.items_factura.map((item, i) => (
+                                                                            <div key={i} className="flex justify-between items-center text-xs py-2 border-b border-gray-50 last:border-0">
+                                                                                <span className="font-bold text-slate-600">{item.descripcion}</span>
+                                                                                <div className="space-x-4">
+                                                                                    <span className="text-gray-400">Cant: {item.cantidad}</span>
+                                                                                    <span className="font-black text-slate-800">${item.total.toLocaleString()}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))
+                                                                    ) : (
+                                                                        <p className="text-gray-400 italic text-xs">No hay ítems registrados en la cabecera.</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
                                         ))}
                                         {data.invoices.length === 0 && (
                                             <tr><td colSpan="6" className="text-center py-20 text-gray-400 font-bold italic">No hay facturas procesadas en el sistema.</td></tr>
